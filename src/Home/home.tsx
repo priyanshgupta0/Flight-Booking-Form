@@ -7,8 +7,10 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
 } from 'react-native';
-import {Formik} from 'formik';
+import {Picker} from '@react-native-picker/picker';
+import {Field, FieldArray, Formik} from 'formik';
 import * as Yup from 'yup';
 
 interface FormValues {
@@ -18,151 +20,254 @@ interface FormValues {
   arrivalLocation: string;
 }
 
-const LegSchema = Yup.object().shape({
-  departureLocation: Yup.string().required('Departure location is required'),
-  arrivalLocation: Yup.string()
-    .required('Arrival location is required')
-    .notOneOf(
-      [Yup.ref('departureLocation')],
-      'Arrival location must be different from departure location',
-    ),
-  departureDate: Yup.date()
-    .min(new Date(), 'Departure date must be in the future')
-    .required('Departure date is required'),
-  passengers: Yup.number()
-    .min(1, 'At least one passenger is required')
-    .required('Number of passengers is required'),
+const validationSchema = Yup.object().shape({
+  legs: Yup.array().of(
+    Yup.object().shape({
+      departureLocation: Yup.string().required(
+        'Departure location is required',
+      ),
+      arrivalLocation: Yup.string().required('Arrival location is required'),
+      departureDate: Yup.date().required('Departure date is required'),
+      passengers: Yup.string()
+        .required('Number of passengers is required')
+        .min(1, 'Must be at least 1 digit')
+        .matches(/^[0-9]+$/, 'Must be a valid number'),
+    }),
+  ),
 });
-
 interface HomeControllerState {
   modalVisible: boolean;
   formData: FormValues[]; // Replace 'any' with the actual type of the items in the array if known
-  legArray: any[];
+  states: string[];
+}
+
+interface FormErrors {
+  legs: {
+    departureLocation: string;
+    arrivalLocation: string;
+    departureDate: string;
+    passengers: string;
+    key: string;
+  }[];
 }
 
 class HomeController extends Component<any> {
   state = {
     modalVisible: false,
     formData: [], // Add 'formData' property to the state
-    legArray: [
-      {
-        departureLocation: '',
-        arrivalLocation: '',
-        departureDate: '',
-        passengers: '',
-        key: '1',
-      },
-      {
-        departureLocation: '',
-        arrivalLocation: '',
-        departureDate: '',
-        passengers: '',
-        key: '2',
-      },
+    states: [
+      'USA',
+      'Canada',
+      'Mexico',
+      'Brazil',
+      'UK',
+      'Germany',
+      'France',
+      'Italy',
+      'China',
+      'Japan',
     ],
   };
 
-  handleSubmit = () => {
-    console.log(this.state.legArray, 'legArray');
+  handleSubmit = (value: any) => {
+    console.log(value, 'value');
   };
 }
 
 export default class HomePage extends HomeController {
   render() {
-    const {modalVisible, formData, legArray} = this.state;
+    const {modalVisible, formData} = this.state;
 
     return (
       <View>
-        <FlatList
-          data={legArray}
-          keyExtractor={item => item.key}
-          renderItem={({item, index}) => (
-            <Formik
-              initialValues={item}
-              validationSchema={LegSchema}
-              onSubmit={this.handleSubmit}>
-              {({
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                values,
-                errors,
-                touched,
-              }) => (
-                <View>
-                  <TextInput
-                    onChangeText={handleChange('departureLocation')}
-                    onBlur={handleBlur('departureLocation')}
-                    value={values.departureLocation}
-                    placeholder="Departure Location"
-                  />
-                  {errors.departureLocation && touched.departureLocation && (
-                    <Text style={{color: 'red'}}>
-                      {errors.departureLocation}
-                    </Text>
-                  )}
-
-                  <TextInput
-                    onChangeText={handleChange('arrivalLocation')}
-                    onBlur={handleBlur('arrivalLocation')}
-                    value={values.arrivalLocation}
-                    placeholder="Arrival Location"
-                  />
-                  {errors.arrivalLocation && touched.arrivalLocation && (
-                    <Text style={{color: 'red'}}>{errors.arrivalLocation}</Text>
-                  )}
-
-                  <TextInput
-                    onChangeText={handleChange('departureDate')}
-                    onBlur={handleBlur('departureDate')}
-                    value={values.departureDate}
-                    placeholder="Departure Date"
-                  />
-                  {errors.departureDate && touched.departureDate && (
-                    <Text style={{color: 'red'}}>{errors.departureDate}</Text>
-                  )}
-
-                  <TextInput
-                    onChangeText={handleChange('passengers')}
-                    onBlur={handleBlur('passengers')}
-                    value={values.passengers}
-                    placeholder="Number of Passengers"
-                    keyboardType="numeric"
-                  />
-                  {errors.passengers && touched.passengers && (
-                    <Text style={{color: 'red'}}>{errors.passengers}</Text>
-                  )}
-                  {index < 5
-                    ? index == legArray.length - 1 && (
-                        <Button
-                          onPress={() => {
-                            this.setState((prevState: HomeControllerState) => ({
-                              legArray: [
-                                ...prevState.legArray,
-                                {
-                                  departureLocation: '',
-                                  arrivalLocation: '',
-                                  departureDate: '',
-                                  passengers: '',
-                                  key: (
-                                    prevState.legArray.length + 1
-                                  ).toString(),
-                                },
-                              ],
-                            }));
-                          }}
-                          title="Add Leg"
+        <Formik
+          initialValues={{
+            legs: [
+              {
+                departureLocation: '',
+                arrivalLocation: '',
+                departureDate: '',
+                passengers: '',
+                key: '1',
+              },
+              {
+                departureLocation: '',
+                arrivalLocation: '',
+                departureDate: '',
+                passengers: '',
+                key: '2',
+              },
+            ],
+          }}
+          validationSchema={validationSchema}
+          onSubmit={this.handleSubmit}>
+          {({
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            setFieldValue,
+            values,
+            errors,
+            touched,
+          }) => (
+            <FieldArray name="legs">
+              {arrayHelpers => (
+                <ScrollView>
+                  {values.legs.map((leg, index) => (
+                    <View key={leg.key}>
+                      <Picker
+                        selectedValue={leg.departureLocation}
+                        onValueChange={(itemValue, itemIndex) =>
+                          setFieldValue(
+                            `legs[${index}].departureLocation`,
+                            itemValue,
+                          )
+                        }>
+                        <Picker.Item
+                          label="Select Departure Location"
+                          value=""
                         />
-                      )
-                    : null}
-                  {index == legArray.length - 1 && (
-                    <Button onPress={() => handleSubmit()} title="Submit" />
+                        {this.state.states.map((state, stateIndex) => (
+                          <Picker.Item
+                            label={state}
+                            value={state}
+                            key={stateIndex}
+                          />
+                        ))}
+                      </Picker>
+                      {errors.legs &&
+                        errors.legs[index] &&
+                        (errors as FormErrors).legs[index].departureLocation &&
+                        touched.legs &&
+                        touched.legs[index] &&
+                        touched.legs[index].departureLocation && (
+                          <Text style={{color: 'red'}}>
+                            {
+                              (errors as FormErrors).legs[index]
+                                .departureLocation
+                            }
+                          </Text>
+                        )}
+                      <Picker
+                        selectedValue={leg.arrivalLocation}
+                        onValueChange={(itemValue, itemIndex) =>
+                          setFieldValue(
+                            `legs[${index}].arrivalLocation`,
+                            itemValue,
+                          )
+                        }>
+                        <Picker.Item label="Select Arrival Location" value="" />
+                        {this.state.states.map((state, stateIndex) => (
+                          <Picker.Item
+                            label={state}
+                            value={state}
+                            key={stateIndex}
+                          />
+                        ))}
+                      </Picker>
+                      {errors.legs &&
+                        errors.legs[index] &&
+                        (errors as FormErrors).legs[index].arrivalLocation &&
+                        touched.legs &&
+                        touched.legs[index] &&
+                        touched.legs[index].arrivalLocation && (
+                          <Text style={{color: 'red'}}>
+                            {(errors as FormErrors).legs[index].arrivalLocation}
+                          </Text>
+                        )}
+
+                      <TextInput
+                        onChangeText={value =>
+                          setFieldValue(`legs[${index}].departureDate`, value)
+                        }
+                        // onBlur={handleBlur(item.departureLocation)}
+                        value={leg.departureDate}
+                        placeholder="Departure Date"
+                      />
+                      {errors.legs &&
+                        errors.legs[index] &&
+                        (errors as FormErrors).legs[index].departureDate &&
+                        touched.legs &&
+                        touched.legs[index] &&
+                        touched.legs[index].departureDate && (
+                          <Text style={{color: 'red'}}>
+                            {(errors as FormErrors).legs[index].departureDate}
+                          </Text>
+                        )}
+
+                      <TextInput
+                        onChangeText={value =>
+                          setFieldValue(`legs[${index}].passengers`, value)
+                        }
+                        // onBlur={handleBlur(item.departureLocation)}
+                        value={leg.passengers}
+                        placeholder="Number of Passengers"
+                        keyboardType="numeric"
+                      />
+                      {errors.legs &&
+                        errors.legs[index] &&
+                        (errors as FormErrors).legs[index].passengers &&
+                        touched.legs &&
+                        touched.legs[index] &&
+                        touched.legs[index].passengers && (
+                          <Text style={{color: 'red'}}>
+                            {(errors as FormErrors).legs[index].passengers}
+                          </Text>
+                        )}
+                    </View>
+                  ))}
+                  {values.legs.length < 5 && (
+                    <Button
+                      onPress={() => {
+                        arrayHelpers.push({
+                          departureLocation: '',
+                          arrivalLocation: '',
+                          departureDate: '',
+                          passengers: '',
+                          key: `${values.legs.length + 1}`,
+                        });
+                      }}
+                      title="Add Leg"
+                    />
                   )}
-                </View>
+
+                  <Button onPress={() => handleSubmit()} title="Submit" />
+                </ScrollView>
               )}
-            </Formik>
+            </FieldArray>
           )}
-        />
+        </Formik>
+
+        <Modal animationType="slide" transparent={true} visible={modalVisible}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            }}>
+            <View style={{backgroundColor: 'white', padding: 20}}>
+              <Text
+                style={{fontSize: 18, fontWeight: 'bold', marginBottom: 10}}>
+                Submitted Data:
+              </Text>
+              {formData.map((data: FormValues, index) => (
+                <View key={index} style={{marginBottom: 10}}>
+                  <Text>Leg {index + 1}:</Text>
+                  <Text>Departure Location: {data.departureLocation}</Text>
+                  <Text>Arrival Location: {data.arrivalLocation}</Text>
+                  <Text>Departure Date: {data.departureDate}</Text>
+                  <Text>Passengers: {data.passengers}</Text>
+                </View>
+              ))}
+              <TouchableOpacity
+                onPress={() => this.setState({modalVisible: false})}
+                style={{marginTop: 10}}>
+                <Text style={{color: 'blue', textAlign: 'center'}}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
