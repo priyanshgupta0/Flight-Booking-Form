@@ -47,7 +47,6 @@ interface FormErrors {
     arrivalLocation: string;
     departureDate: string;
     passengers: string;
-    key: string;
   }[];
 }
 
@@ -88,14 +87,12 @@ export default class HomePage extends HomeController {
                 arrivalLocation: '',
                 departureDate: '',
                 passengers: '',
-                key: '1',
               },
               {
                 departureLocation: '',
                 arrivalLocation: '',
                 departureDate: '',
                 passengers: '',
-                key: '2',
               },
             ],
           }}
@@ -114,7 +111,7 @@ export default class HomePage extends HomeController {
               {arrayHelpers => (
                 <ScrollView>
                   {values.legs.map((leg, index) => (
-                    <View key={leg.key}>
+                    <View key={index}>
                       <Picker
                         selectedValue={leg.departureLocation}
                         onValueChange={(itemValue, itemIndex) =>
@@ -214,8 +211,16 @@ export default class HomePage extends HomeController {
                             {(errors as FormErrors).legs[index].passengers}
                           </Text>
                         )}
+                      {values.legs.length > 2 && // Only show if there's more than one leg
+                        index > 1 && (
+                          <Button
+                            onPress={() => arrayHelpers.remove(index)} // Use FieldArray helper to remove
+                            title="Remove Leg"
+                          />
+                        )}
                     </View>
                   ))}
+
                   {values.legs.length < 5 && (
                     <Button
                       onPress={() => {
@@ -224,7 +229,6 @@ export default class HomePage extends HomeController {
                           arrivalLocation: '',
                           departureDate: '',
                           passengers: '',
-                          key: `${values.legs.length + 1}`,
                         });
                       }}
                       title="Add Leg"
