@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {Field, FieldArray, Formik} from 'formik';
 import * as Yup from 'yup';
 
@@ -20,17 +21,27 @@ interface FormValues {
   arrivalLocation: string;
 }
 
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
 const validationSchema = Yup.object().shape({
   legs: Yup.array().of(
     Yup.object().shape({
       departureLocation: Yup.string().required(
         'Departure location is required',
       ),
-      arrivalLocation: Yup.string().required('Arrival location is required'),
-      departureDate: Yup.date().required('Departure date is required'),
+      arrivalLocation: Yup.string()
+        .required('Arrival location is required')
+        .notOneOf(
+          [Yup.ref('departureLocation'), null], // Compare against 'departureLocation'
+          'Arrival location cannot be the same as departure location',
+        ),
+      departureDate: Yup.date()
+        .required('Departure date is required')
+        .min(today, 'Departure date must be today or later'),
       passengers: Yup.string()
         .required('Number of passengers is required')
-        .min(1, 'Must be at least 1 digit')
+        .min(1, 'At least 1 passenger is required')
         .matches(/^[0-9]+$/, 'Must be a valid number'),
     }),
   ),
@@ -39,6 +50,7 @@ interface HomeControllerState {
   modalVisible: boolean;
   formData: FormValues[]; // Replace 'any' with the actual type of the items in the array if known
   states: string[];
+  showDatePicker: any;
 }
 
 interface FormErrors {
@@ -66,16 +78,18 @@ class HomeController extends Component<any> {
       'China',
       'Japan',
     ],
+    showDatePicker: null,
   };
 
   handleSubmit = (value: any) => {
+    this.setState({modalVisible: true, formData: value.legs});
     console.log(value, 'value');
   };
 }
 
 export default class HomePage extends HomeController {
   render() {
-    const {modalVisible, formData} = this.state;
+    const {modalVisible, formData, showDatePicker} = this.state;
 
     return (
       <View>
@@ -85,13 +99,13 @@ export default class HomePage extends HomeController {
               {
                 departureLocation: '',
                 arrivalLocation: '',
-                departureDate: '',
+                departureDate: new Date().toISOString(),
                 passengers: '',
               },
               {
                 departureLocation: '',
                 arrivalLocation: '',
-                departureDate: '',
+                departureDate: new Date().toISOString(),
                 passengers: '',
               },
             ],
@@ -173,11 +187,29 @@ export default class HomePage extends HomeController {
                           </Text>
                         )}
 
+                      <TouchableOpacity
+                        onPress={() => this.setState({showDatePicker: index})}>
+                        <Text>Select Date</Text>
+                      </TouchableOpacity>
+                      {showDatePicker === index && (
+                        <DateTimePicker
+                          value={new Date(leg.departureDate)} // Make sure departureDate has a Date object
+                          mode="date"
+                          display="default"
+                          onChange={(event, selectedDate) => {
+                            this.setState({showDatePicker: false});
+                            const newDate = selectedDate
+                              ? selectedDate.toISOString()
+                              : '';
+                            setFieldValue(
+                              `legs[${index}].departureDate`,
+                              newDate,
+                            );
+                          }}
+                        />
+                      )}
                       <TextInput
-                        onChangeText={value =>
-                          setFieldValue(`legs[${index}].departureDate`, value)
-                        }
-                        // onBlur={handleBlur(item.departureLocation)}
+                        editable={false} // onBlur={handleBlur(item.departureLocation)}
                         value={leg.departureDate}
                         placeholder="Departure Date"
                       />
@@ -227,7 +259,7 @@ export default class HomePage extends HomeController {
                         arrayHelpers.push({
                           departureLocation: '',
                           arrivalLocation: '',
-                          departureDate: '',
+                          departureDate: new Date().toISOString(),
                           passengers: '',
                         });
                       }}
