@@ -12,6 +12,7 @@ import {
 import {Picker} from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {Field, FieldArray, Formik} from 'formik';
+import Autocomplete from 'react-native-autocomplete-input';
 import * as Yup from 'yup';
 
 interface FormValues {
@@ -79,6 +80,8 @@ class HomeController extends Component<any> {
       'Japan',
     ],
     showDatePicker: null,
+    query: '',
+    filteredStates: [],
   };
 
   handleSubmit = (value: any) => {
@@ -89,7 +92,8 @@ class HomeController extends Component<any> {
 
 export default class HomePage extends HomeController {
   render() {
-    const {modalVisible, formData, showDatePicker} = this.state;
+    const {modalVisible, formData, showDatePicker, filteredStates, query} =
+      this.state;
 
     return (
       <View>
@@ -123,152 +127,197 @@ export default class HomePage extends HomeController {
           }) => (
             <FieldArray name="legs">
               {arrayHelpers => (
-                <ScrollView>
-                  {values.legs.map((leg, index) => (
-                    <View key={index}>
-                      <Picker
-                        selectedValue={leg.departureLocation}
-                        onValueChange={(itemValue, itemIndex) =>
-                          setFieldValue(
-                            `legs[${index}].departureLocation`,
-                            itemValue,
-                          )
-                        }>
-                        <Picker.Item
-                          label="Select Departure Location"
-                          value=""
-                        />
-                        {this.state.states.map((state, stateIndex) => (
-                          <Picker.Item
-                            label={state}
-                            value={state}
-                            key={stateIndex}
-                          />
-                        ))}
-                      </Picker>
-                      {errors.legs &&
-                        errors.legs[index] &&
-                        (errors as FormErrors).legs[index].departureLocation &&
-                        touched.legs &&
-                        touched.legs[index] &&
-                        touched.legs[index].departureLocation && (
-                          <Text style={{color: 'red'}}>
-                            {
-                              (errors as FormErrors).legs[index]
-                                .departureLocation
-                            }
-                          </Text>
-                        )}
-                      <Picker
-                        selectedValue={leg.arrivalLocation}
-                        onValueChange={(itemValue, itemIndex) =>
-                          setFieldValue(
-                            `legs[${index}].arrivalLocation`,
-                            itemValue,
-                          )
-                        }>
-                        <Picker.Item label="Select Arrival Location" value="" />
-                        {this.state.states.map((state, stateIndex) => (
-                          <Picker.Item
-                            label={state}
-                            value={state}
-                            key={stateIndex}
-                          />
-                        ))}
-                      </Picker>
-                      {errors.legs &&
-                        errors.legs[index] &&
-                        (errors as FormErrors).legs[index].arrivalLocation &&
-                        touched.legs &&
-                        touched.legs[index] &&
-                        touched.legs[index].arrivalLocation && (
-                          <Text style={{color: 'red'}}>
-                            {(errors as FormErrors).legs[index].arrivalLocation}
-                          </Text>
-                        )}
-
-                      <TouchableOpacity
-                        onPress={() => this.setState({showDatePicker: index})}>
-                        <Text>Select Date</Text>
-                      </TouchableOpacity>
-                      {showDatePicker === index && (
-                        <DateTimePicker
-                          value={new Date(leg.departureDate)} // Make sure departureDate has a Date object
-                          mode="date"
-                          display="default"
-                          onChange={(event, selectedDate) => {
-                            this.setState({showDatePicker: false});
-                            const newDate = selectedDate
-                              ? selectedDate.toISOString()
-                              : '';
-                            setFieldValue(
-                              `legs[${index}].departureDate`,
-                              newDate,
+                <FlatList
+                  data={values.legs}
+                  keyExtractor={(item, index) => index.toString()}
+                  renderItem={({item, index}) => (
+                    <View>
+                      <View key={index}>
+                        <Autocomplete
+                          data={filteredStates}
+                          value={item.departureLocation}
+                          onChangeText={text => {
+                            this.setState({query: text});
+                            // Filter your states array
+                            const results = this.state.states.filter(state =>
+                              state
+                                .toLowerCase()
+                                .startsWith(text.toLowerCase()),
                             );
+                            this.setState({filteredStates: results});
                           }}
+                          flatListProps={{
+                            renderItem: ({item}) => (
+                              <TouchableOpacity
+                                onPress={() => {
+                                  this.setState({query: item});
+                                  setFieldValue(
+                                    `legs[${index}].departureLocation`,
+                                    item,
+                                  );
+                                  this.setState({filteredStates: []}); // Clear suggestions
+                                }}>
+                                <Text>{item}</Text>
+                              </TouchableOpacity>
+                            ),
+                          }}
+                          placeholder="Select Departure Location"
+                        />
+                        <Picker
+                          selectedValue={item.departureLocation}
+                          onValueChange={(itemValue, itemIndex) =>
+                            setFieldValue(
+                              `legs[${index}].departureLocation`,
+                              itemValue,
+                            )
+                          }>
+                          <Picker.Item
+                            label="Select Departure Location"
+                            value=""
+                          />
+                          {this.state.states.map((state, stateIndex) => (
+                            <Picker.Item
+                              label={state}
+                              value={state}
+                              key={stateIndex}
+                            />
+                          ))}
+                        </Picker>
+                        {errors.legs &&
+                          errors.legs[index] &&
+                          (errors as FormErrors).legs[index]
+                            .departureLocation &&
+                          touched.legs &&
+                          touched.legs[index] &&
+                          touched.legs[index].departureLocation && (
+                            <Text style={{color: 'red'}}>
+                              {
+                                (errors as FormErrors).legs[index]
+                                  .departureLocation
+                              }
+                            </Text>
+                          )}
+                        <Picker
+                          selectedValue={item.arrivalLocation}
+                          onValueChange={(itemValue, itemIndex) =>
+                            setFieldValue(
+                              `legs[${index}].arrivalLocation`,
+                              itemValue,
+                            )
+                          }>
+                          <Picker.Item
+                            label="Select Arrival Location"
+                            value=""
+                          />
+                          {this.state.states.map((state, stateIndex) => (
+                            <Picker.Item
+                              label={state}
+                              value={state}
+                              key={stateIndex}
+                            />
+                          ))}
+                        </Picker>
+                        {errors.legs &&
+                          errors.legs[index] &&
+                          (errors as FormErrors).legs[index].arrivalLocation &&
+                          touched.legs &&
+                          touched.legs[index] &&
+                          touched.legs[index].arrivalLocation && (
+                            <Text style={{color: 'red'}}>
+                              {
+                                (errors as FormErrors).legs[index]
+                                  .arrivalLocation
+                              }
+                            </Text>
+                          )}
+
+                        <TouchableOpacity
+                          onPress={() =>
+                            this.setState({showDatePicker: index})
+                          }>
+                          <Text>Select Date</Text>
+                        </TouchableOpacity>
+                        {showDatePicker === index && (
+                          <DateTimePicker
+                            value={new Date(item.departureDate)} // Make sure departureDate has a Date object
+                            mode="date"
+                            display="default"
+                            onChange={(event, selectedDate) => {
+                              this.setState({showDatePicker: false});
+                              const newDate = selectedDate
+                                ? selectedDate.toISOString()
+                                : '';
+                              setFieldValue(
+                                `legs[${index}].departureDate`,
+                                newDate,
+                              );
+                            }}
+                          />
+                        )}
+                        <TextInput
+                          editable={false} // onBlur={handleBlur(item.departureLocation)}
+                          value={item.departureDate}
+                          placeholder="Departure Date"
+                        />
+                        {errors.legs &&
+                          errors.legs[index] &&
+                          (errors as FormErrors).legs[index].departureDate &&
+                          touched.legs &&
+                          touched.legs[index] &&
+                          touched.legs[index].departureDate && (
+                            <Text style={{color: 'red'}}>
+                              {(errors as FormErrors).legs[index].departureDate}
+                            </Text>
+                          )}
+
+                        <TextInput
+                          onChangeText={value =>
+                            setFieldValue(`legs[${index}].passengers`, value)
+                          }
+                          // onBlur={handleBlur(item.departureLocation)}
+                          value={item.passengers}
+                          placeholder="Number of Passengers"
+                          keyboardType="numeric"
+                        />
+                        {errors.legs &&
+                          errors.legs[index] &&
+                          (errors as FormErrors).legs[index].passengers &&
+                          touched.legs &&
+                          touched.legs[index] &&
+                          touched.legs[index].passengers && (
+                            <Text style={{color: 'red'}}>
+                              {(errors as FormErrors).legs[index].passengers}
+                            </Text>
+                          )}
+                        {values.legs.length > 2 && // Only show if there's more than one leg
+                          index > 1 && (
+                            <Button
+                              onPress={() => arrayHelpers.remove(index)} // Use FieldArray helper to remove
+                              title="Remove Leg"
+                            />
+                          )}
+                      </View>
+
+                      {values.legs.length < 5 && (
+                        <Button
+                          onPress={() => {
+                            arrayHelpers.push({
+                              departureLocation: '',
+                              arrivalLocation: '',
+                              departureDate: new Date().toISOString(),
+                              passengers: '',
+                            });
+                          }}
+                          title="Add Leg"
                         />
                       )}
-                      <TextInput
-                        editable={false} // onBlur={handleBlur(item.departureLocation)}
-                        value={leg.departureDate}
-                        placeholder="Departure Date"
-                      />
-                      {errors.legs &&
-                        errors.legs[index] &&
-                        (errors as FormErrors).legs[index].departureDate &&
-                        touched.legs &&
-                        touched.legs[index] &&
-                        touched.legs[index].departureDate && (
-                          <Text style={{color: 'red'}}>
-                            {(errors as FormErrors).legs[index].departureDate}
-                          </Text>
-                        )}
 
-                      <TextInput
-                        onChangeText={value =>
-                          setFieldValue(`legs[${index}].passengers`, value)
-                        }
-                        // onBlur={handleBlur(item.departureLocation)}
-                        value={leg.passengers}
-                        placeholder="Number of Passengers"
-                        keyboardType="numeric"
-                      />
-                      {errors.legs &&
-                        errors.legs[index] &&
-                        (errors as FormErrors).legs[index].passengers &&
-                        touched.legs &&
-                        touched.legs[index] &&
-                        touched.legs[index].passengers && (
-                          <Text style={{color: 'red'}}>
-                            {(errors as FormErrors).legs[index].passengers}
-                          </Text>
-                        )}
-                      {values.legs.length > 2 && // Only show if there's more than one leg
-                        index > 1 && (
-                          <Button
-                            onPress={() => arrayHelpers.remove(index)} // Use FieldArray helper to remove
-                            title="Remove Leg"
-                          />
-                        )}
+                      <Button onPress={() => handleSubmit()} title="Submit" />
                     </View>
-                  ))}
-
-                  {values.legs.length < 5 && (
-                    <Button
-                      onPress={() => {
-                        arrayHelpers.push({
-                          departureLocation: '',
-                          arrivalLocation: '',
-                          departureDate: new Date().toISOString(),
-                          passengers: '',
-                        });
-                      }}
-                      title="Add Leg"
-                    />
                   )}
-
-                  <Button onPress={() => handleSubmit()} title="Submit" />
-                </ScrollView>
+                  // Ensure a unique key
+                  // ... Any other desired FlatList props ...
+                />
               )}
             </FieldArray>
           )}
