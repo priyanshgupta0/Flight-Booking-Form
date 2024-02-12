@@ -40,10 +40,9 @@ const validationSchema = Yup.object().shape({
         departureDate: Yup.date()
           .required('Departure date is required')
           .min(today, 'Departure date must be today or later'),
-        passengers: Yup.string()
+        passengers: Yup.number()
           .required('Number of passengers is required')
-          .min(1, 'At least 1 passenger is required')
-          .matches(/^[0-9]+$/, 'Must be a valid number'),
+          .min(1, 'At least 1 passenger is required'),
       }),
     )
     .test(
@@ -106,6 +105,7 @@ class HomeController extends Component<any> {
 }
 
 export default class HomePage extends HomeController {
+  regex = /^[1-9][0-9]*$/;
   render() {
     const {modalVisible, formData, showDatePicker} = this.state;
 
@@ -243,9 +243,11 @@ export default class HomePage extends HomeController {
                         )}
 
                       <TextInput
-                        onChangeText={value =>
-                          setFieldValue(`legs[${index}].passengers`, value)
-                        }
+                        onChangeText={value => {
+                          if (this.regex.test(value) || value == '') {
+                            setFieldValue(`legs[${index}].passengers`, value);
+                          }
+                        }}
                         // onBlur={handleBlur(item.departureLocation)}
                         value={leg.passengers}
                         placeholder="Number of Passengers"
