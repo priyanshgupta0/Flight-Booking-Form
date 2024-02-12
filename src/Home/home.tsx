@@ -25,26 +25,44 @@ const today = new Date();
 today.setHours(0, 0, 0, 0);
 
 const validationSchema = Yup.object().shape({
-  legs: Yup.array().of(
-    Yup.object().shape({
-      departureLocation: Yup.string().required(
-        'Departure location is required',
-      ),
-      arrivalLocation: Yup.string()
-        .required('Arrival location is required')
-        .notOneOf(
-          [Yup.ref('departureLocation'), null], // Compare against 'departureLocation'
-          'Arrival location cannot be the same as departure location',
+  legs: Yup.array()
+    .of(
+      Yup.object().shape({
+        departureLocation: Yup.string().required(
+          'Departure location is required',
         ),
-      departureDate: Yup.date()
-        .required('Departure date is required')
-        .min(today, 'Departure date must be today or later'),
-      passengers: Yup.string()
-        .required('Number of passengers is required')
-        .min(1, 'At least 1 passenger is required')
-        .matches(/^[0-9]+$/, 'Must be a valid number'),
-    }),
-  ),
+        arrivalLocation: Yup.string()
+          .required('Arrival location is required')
+          .notOneOf(
+            [Yup.ref('departureLocation'), null], // Compare against 'departureLocation'
+            'Arrival location cannot be the same as departure location',
+          ),
+        departureDate: Yup.date()
+          .required('Departure date is required')
+          .min(today, 'Departure date must be today or later'),
+        passengers: Yup.string()
+          .required('Number of passengers is required')
+          .min(1, 'At least 1 passenger is required')
+          .matches(/^[0-9]+$/, 'Must be a valid number'),
+      }),
+    )
+    .test(
+      'is-ascending',
+      'Dates must be in ascending order',
+      function (value: any) {
+        let isValid = true;
+        for (let i = 1; i < value.length; i++) {
+          if (
+            new Date(value[i].departureDate!) <
+            new Date(value[i - 1].departureDate!)
+          ) {
+            isValid = false;
+            break;
+          }
+        }
+        return isValid;
+      },
+    ),
 });
 interface HomeControllerState {
   modalVisible: boolean;
@@ -266,7 +284,9 @@ export default class HomePage extends HomeController {
                       title="Add Leg"
                     />
                   )}
-
+                  {errors.legs && typeof errors.legs === 'string' && (
+                    <Text style={{color: 'red'}}>{errors.legs}</Text>
+                  )}
                   <Button onPress={() => handleSubmit()} title="Submit" />
                 </ScrollView>
               )}
