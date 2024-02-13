@@ -13,6 +13,7 @@ import {Picker} from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {Field, FieldArray, Formik} from 'formik';
 import * as Yup from 'yup';
+import Autocomplete from '../Components/AutoComplete';
 
 interface FormValues {
   passengers: string;
@@ -144,7 +145,20 @@ export default class HomePage extends HomeController {
                 <ScrollView>
                   {values.legs.map((leg, index) => (
                     <View key={index}>
-                      <Picker
+                      <Autocomplete
+                        data={this.state.states}
+                        value={leg.departureLocation}
+                        onChange={(text: any) =>
+                          setFieldValue(
+                            `legs[${index}].departureLocation`,
+                            text,
+                          )
+                        }
+                        label="Departure Location"
+                        menuStyle={{backgroundColor: 'white'}}
+                        containerStyle={{}} // onChange={() => {}}
+                      />
+                      {/* <Picker
                         selectedValue={leg.departureLocation}
                         onValueChange={(itemValue, itemIndex) =>
                           setFieldValue(
@@ -163,7 +177,7 @@ export default class HomePage extends HomeController {
                             key={stateIndex}
                           />
                         ))}
-                      </Picker>
+                      </Picker> */}
                       {errors.legs &&
                         errors.legs[index] &&
                         (errors as FormErrors).legs[index].departureLocation &&
@@ -177,7 +191,17 @@ export default class HomePage extends HomeController {
                             }
                           </Text>
                         )}
-                      <Picker
+                      <Autocomplete
+                        data={this.state.states}
+                        value={leg.arrivalLocation}
+                        onChange={(text: any) =>
+                          setFieldValue(`legs[${index}].arrivalLocation`, text)
+                        }
+                        label="Arrival Location"
+                        menuStyle={{backgroundColor: 'white'}}
+                        containerStyle={{}} // onChange={() => {}}
+                      />
+                      {/* <Picker
                         selectedValue={leg.arrivalLocation}
                         onValueChange={(itemValue, itemIndex) =>
                           setFieldValue(
@@ -193,7 +217,7 @@ export default class HomePage extends HomeController {
                             key={stateIndex}
                           />
                         ))}
-                      </Picker>
+                      </Picker> */}
                       {errors.legs &&
                         errors.legs[index] &&
                         (errors as FormErrors).legs[index].arrivalLocation &&
